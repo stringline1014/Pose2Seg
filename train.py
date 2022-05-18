@@ -57,12 +57,15 @@ def train(model, dataloader, optimizer, epoch, iteration):
                          STEPS=(0, 14150*15, 14150*20), GAMMA=0.1)  
         
         # forward
+        print("forward")
         outputs = model(**inputs)
         
         # loss
+        print("loss")
         loss = outputs
             
         # backward
+        print("backward")
         averMeters['loss'].update(loss.data.item())
         optimizer.zero_grad()
         loss.backward()
@@ -92,8 +95,8 @@ def train(model, dataloader, optimizer, epoch, iteration):
 
 class Dataset():
     def __init__(self):
-        ImageRoot = './data/coco2017/train2017'
-        AnnoFile = './data/coco2017/annotations/person_keypoints_train2017_pose2seg.json'
+        ImageRoot = '/content/drive/MyDrive/Colab Notebooks/Pose2Seg/data/coco2017/train2017'
+        AnnoFile = '/content/drive/MyDrive/Colab Notebooks/Pose2Seg/data/coco2017/annotations/person_keypoints_train2017_pose2seg.json'
         self.datainfos = CocoDatasetInfo(ImageRoot, AnnoFile, onlyperson=True, loadimg=True)
     
     def __len__(self):
@@ -102,9 +105,12 @@ class Dataset():
     def __getitem__(self, idx):
         rawdata = self.datainfos[idx]
         img = rawdata['data']
-        image_id = rawdata['id']
         
-        height, width = img.shape[0:2]
+        image_id = rawdata['id']
+        try:
+          height, width = img.shape[0:2]
+        except:
+          return None
         gt_kpts = np.float32(rawdata['gt_keypoints']).transpose(0, 2, 1) # (N, 17, 3)
         gt_segms = rawdata['segms']
         gt_masks = np.array([annToMask(segm, height, width) for segm in gt_segms])
@@ -112,9 +118,30 @@ class Dataset():
         return {'img': img, 'kpts': gt_kpts, 'masks': gt_masks}
         
     def collate_fn(self, batch):
-        batchimgs = [data['img'] for data in batch]
-        batchkpts = [data['kpts'] for data in batch]
-        batchmasks = [data['masks'] for data in batch]
+        batchimgs = []
+        for data in batch:
+          try:
+            img_data = data['img']
+            batchimgs.append(img_data)
+          except:
+            pass
+        
+        batchkpts = []
+        for data in batch:
+          try:
+            img_kpts = data['kpts']
+            batchkpts.append(img_kpts)
+          except:
+            pass
+
+        batchmasks = []
+        for data in batch:
+          try:
+            img_masks = data['masks']
+            batchmasks.append(img_masks)
+          except:
+            pass
+
         return {'batchimgs': batchimgs, 'batchkpts': batchkpts, 'batchmasks':batchmasks}
         
 if __name__=='__main__':
